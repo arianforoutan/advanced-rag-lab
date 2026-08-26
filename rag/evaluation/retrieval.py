@@ -1,7 +1,13 @@
-"""Retrieval evaluation: Hit@k and MRR, before and after reranking.
+"""Retrieval-quality metrics: Hit@k and MRR, before and after reranking.
 
-The metrics use the same hybrid retrieval path as production (vector + BM25 +
-RRF), so the numbers reflect what the agent actually retrieves.
+This layer measures the retrieval stack in isolation — it never calls a judge
+model, so it is cheap, deterministic (aside from optional LLM query expansion),
+and answers the question the end-to-end metrics cannot: *did the right document
+get retrieved, and does reranking actually help?*
+
+It uses the same production components (query expansion + hybrid vector/BM25
+search fused with RRF, then cross-encoder reranking) so the numbers reflect what
+the agent really retrieves.
 """
 
 from __future__ import annotations
@@ -11,32 +17,12 @@ import os
 
 from langchain_core.documents import Document
 
-from . import config
-from .pipeline import RagPipeline
-from .retrieval import hybrid_search
+from .. import config
+from ..pipeline import RagPipeline
+from ..retrieval import generate_queries, hybrid_search
+from .dataset import EVALUATION_SET
 
 logger = logging.getLogger(__name__)
-
-# Labelled queries with the source filenames a good retriever should surface.
-# Edit this set as the knowledge base and expected answers evolve.
-EVALUATION_SET = [
-    {
-        "query": "What products does Insurellm offer?",
-        "expected_sources": {"overview.md", "about.md"},
-    },
-    {
-        "query": "What are the features of Rellm?",
-        "expected_sources": {"Rellm.md"},
-    },
-    {
-        "query": "What does Claimllm do?",
-        "expected_sources": {"Claimllm.md", "overview.md"},
-    },
-    {
-        "query": "Which Insurellm contracts use Homellm?",
-        "expected_sources": {"Homellm.md", "overview.md"},
-    },
-]
 
 
 def _source_names(documents: list[Document]) -> list[str]:
@@ -44,7 +30,7 @@ def _source_names(documents: list[Document]) -> list[str]:
 
 
 def _metrics(results_by_query, k: int) -> dict:
-    """Compute Hit@k and MRR from (example, results) pairs."""
+    """Compute Hit@k and MRR from ``(example, results)`` pairs."""
     hits = 0
     reciprocal_ranks = []
 
@@ -74,15 +60,27 @@ def _metrics(results_by_query, k: int) -> dict:
     }
 
 
-def evaluate_retrieval(pipeline: RagPipeline, examples=EVALUATION_SET) -> dict:
-    """Return Hit@k / MRR for hybrid retrieval, before and after reranking."""
+def run_retrieval_evaluation(
+    pipeline: RagPipeline,
+    examples: list[dict] = EVALUATION_SET,
+    *,
+    use_query_expansion: bool = True,
+) -> dict:
+    """Return Hit@k / MRR for hybrid retrieval, before and after reranking.
+
+    Set ``use_query_expansion=False`` to skip the LLM query-expansion step and
+    run the retrieval metrics fully offline (no API calls).
+    """
     before_rerank = []
     after_rerank = []
 
     for example in examples:
         query = example["query"]
 
-        hybrid_results = hybrid_search(pipeline.retriever, pipeline.bm25_index, query)
+        alternatives = generate_queries(pipeline.llm, query) if use_query_expansion else None
+        hybrid_results = hybrid_search(
+            pipeline.retriever, pipeline.bm25_index, query, alternatives
+        )
         before_rerank.append((example, hybrid_results))
 
         candidates = hybrid_results[: config.HYBRID_CANDIDATE_K]

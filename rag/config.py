@@ -36,6 +36,11 @@ EMBEDDING_MODEL = "all-MiniLM-L6-v2"
 CHAT_MODEL = "gpt-5-nano"
 RERANKER_MODEL = "BAAI/bge-reranker-base"
 
+# The model used as the Ragas judge during evaluation. Kept separate from
+# CHAT_MODEL so the evaluator can differ from the generator (avoiding
+# self-evaluation bias); override with the JUDGE_MODEL environment variable.
+JUDGE_MODEL = os.getenv("JUDGE_MODEL", CHAT_MODEL)
+
 
 # ---------------------------------------------------------------------------
 # Credentials / endpoints (read from the environment / .env)

@@ -8,10 +8,14 @@ from langchain_openai import ChatOpenAI
 from . import config
 
 
-def build_llm() -> ChatOpenAI:
-    """Create the chat model used for generation, query expansion, and extraction."""
+def build_llm(model: str = config.CHAT_MODEL) -> ChatOpenAI:
+    """Create a chat model used for generation, query expansion, and extraction.
+
+    ``model`` defaults to ``config.CHAT_MODEL`` but can be overridden (e.g. to
+    build a separate judge model for evaluation).
+    """
     return ChatOpenAI(
-        model=config.CHAT_MODEL,
+        model=model,
         base_url=config.GAPGPT_BASE_URL,
         api_key=config.GAPGPT_API_KEY,
     )
