@@ -16,7 +16,7 @@ from .ingestion import filter_public_chunks, load_documents, split_documents
 from .llm import build_embeddings, build_llm
 from .retrieval import BM25Index, Reranker, generate_queries, hybrid_search
 from .vector_store import build_public_retriever, get_or_create_vector_store
-
+from langsmith import traceable
 logger = logging.getLogger(__name__)
 
 
@@ -78,15 +78,20 @@ class RagPipeline:
         """Connect to Neo4j, or return ``None`` if it is unavailable."""
         try:
             graph_store = GraphStore.connect()
-            # Touch the connection now so an unreachable DB fails here, up front,
-            # rather than on the first user query.
+            
             graph_store.query("RETURN 1 AS ok")
             logger.info("Connected to Neo4j knowledge graph")
             return GraphSearcher(llm, graph_store)
-        except Exception as exc:  # noqa: BLE001 - graph is an optional context source
+        except Exception as exc:  
             logger.warning("Knowledge graph unavailable, continuing text-only: %s", exc)
             return None
 
+
+    @traceable(
+        name="Advanced RAG Retrieval Flow",
+        run_type="chain",
+        metadata={"component": "rag_pipeline"}
+    )
     def search_knowledge_base(self, query: str) -> str:
         """Run the full retrieval flow and return combined context for the LLM.
 
@@ -94,12 +99,10 @@ class RagPipeline:
         search (vector + BM25 + RRF) -> cross-encoder rerank -> merge graph and
         text context.
         """
-        # 1. Guardrail: refuse sensitive or off-topic queries before retrieving.
         policy_response = question_policy(query)
         if policy_response:
             return policy_response
 
-        # 2. Structured retrieval from the knowledge graph (optional).
         graph_context = ""
         if self.graph_searcher is not None:
             graph_context = self.graph_searcher.search(query)
@@ -108,11 +111,9 @@ class RagPipeline:
         else:
             logger.info("Graph facts: none found")
 
-        # 3. Query expansion.
         queries = generate_queries(self.llm, query)
         logger.info("Generated alternative queries: %s", queries)
 
-        # 4. Hybrid retrieval (vector + BM25) fused with RRF.
         docs = hybrid_search(self.retriever, self.bm25_index, query, queries)
         if not docs:
             logger.info("No documents found via hybrid search")
@@ -124,7 +125,6 @@ class RagPipeline:
             [doc.metadata.get("source") for doc in docs],
         )
 
-        # 5. Cross-encoder reranking.
         reranked_docs = self.reranker.rerank(query, docs, top_k=config.RERANK_TOP_K)
         logger.info(
             "Top chunks after reranking: %s",
@@ -133,7 +133,6 @@ class RagPipeline:
 
         text_context = "\n\n".join(doc.page_content for doc in reranked_docs)
 
-        # 6. Merge graph relationships and text context into one payload.
         combined = []
         if graph_context:
             combined.append(f"### KNOWLEDGE GRAPH RELATIONSHIPS:\n{graph_context}")

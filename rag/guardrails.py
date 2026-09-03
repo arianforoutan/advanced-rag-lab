@@ -1,10 +1,10 @@
 """Input guardrails applied before any retrieval happens."""
 
 from __future__ import annotations
-
+from langsmith import traceable
 from . import config
 
-
+@traceable(name="Guardrail Check", run_type="chain")
 def question_policy(query: str) -> str | None:
     """Return a canned refusal for disallowed queries, or ``None`` to proceed.
 

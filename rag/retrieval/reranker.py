@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from langchain_core.documents import Document
 from sentence_transformers import CrossEncoder
-
+from langsmith import traceable
 from .. import config
 
 
@@ -17,7 +17,7 @@ class Reranker:
 
     def __init__(self, model_name: str = config.RERANKER_MODEL):
         self._model = CrossEncoder(model_name)
-
+    @traceable(name="Cross-Encoder Rerank", run_type="chain")
     def rerank(
         self,
         query: str,

@@ -6,7 +6,7 @@ import logging
 
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
-
+from langsmith import traceable
 from .store import GraphStore
 
 logger = logging.getLogger(__name__)
@@ -41,6 +41,8 @@ class GraphSearcher:
         self._graph_store = graph_store
         self._entity_chain = ENTITY_EXTRACTION_PROMPT | llm | StrOutputParser()
 
+        
+    @traceable(name="Neo4j Graph Search", run_type="tool")
     def search(self, query: str) -> str:
         """Return bulleted graph facts related to the query, or "" if none/on error.
 

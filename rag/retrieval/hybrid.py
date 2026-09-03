@@ -6,8 +6,10 @@ from langchain_core.documents import Document
 
 from .bm25 import BM25Index
 from .fusion import reciprocal_rank_fusion
+from langsmith import traceable
 
 
+@traceable(name="Hybrid Search (BM25 + Vector + RRF)", run_type="retriever")
 def hybrid_search(
     retriever,
     bm25_index: BM25Index,
