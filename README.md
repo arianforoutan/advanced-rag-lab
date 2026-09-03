@@ -1,27 +1,68 @@
-# Insurellm Graph + Hybrid RAG
+# Insurellm: Graph-Augmented Hybrid RAG & Multi-Agent Architecture
 
-A retrieval-augmented assistant for the fictional **Insurellm** company. It combines
-**hybrid retrieval** (vector + BM25 with Reciprocal Rank Fusion), **cross-encoder reranking**,
-a **Neo4j knowledge graph**, and **guardrails**, exposed through a single-tool LangChain agent.
+[![Python 3.12+](https://img.shields.io/badge/Python-3.12%2B-blue.svg)](https://www.python.org/downloads/)
+[![LangChain](https://img.shields.io/badge/LangChain-Integration-orange)](https://github.com/langchain-ai/langchain)
+[![Neo4j](https://img.shields.io/badge/Neo4j-Graph%20DB-008CC1)](https://neo4j.com/)
+[![Chroma](https://img.shields.io/badge/Chroma-Vector%20Store-red)](https://www.trychroma.com/)
+[![LangSmith](https://img.shields.io/badge/Observability-LangSmith-1C3C3C)](https://smith.langchain.com/)
 
-> This is the modular version of the original `test_1.ipynb` notebook (kept for reference in
-> [`archive/`](archive/)). The pipeline behavior is unchanged — only the structure is.
+A modular, production-grade Retrieval-Augmented Generation (RAG) pipeline designed for domain-specific question answering. It integrates **Dense (Vector) + Sparse (BM25)** retrieval with **Reciprocal Rank Fusion (RRF)**, **Cross-Encoder Reranking**, an explicit **Neo4j Knowledge Graph**, enterprise **Guardrails**, and end-to-end **LangSmith Observability**.
 
 ---
 
-## فارسی
+## 📑 فهرست مطالب / Table of Contents
+- [معرفی فارسی (Persian Overview)](#-معرفی-فارسی)
+- [Architecture & Key Features](#-architecture--key-features)
+- [Project Layout](#-project-layout)
+- [Environment Configuration](#-environment-configuration)
+- [Quickstart & Usage](#-quickstart--usage)
+- [Observability & Tracing (LangSmith)](#-observability--tracing)
+- [Evaluation Framework](#-evaluation-framework)
 
-### معرفی
-این پروژه یک دستیار RAG برای شرکت (خیالی) Insurellm است. برای پاسخ به هر سؤال، از ترکیب چند
-روش بازیابی استفاده می‌کند:
+---
 
-- **جست‌وجوی برداری** با Chroma + **جست‌وجوی کلیدواژه‌ای** با BM25، و ادغام نتایج با روش
-  **Reciprocal Rank Fusion (RRF)**
-- **بازچینش (Reranking)** با یک مدل Cross-Encoder
-- **گراف دانش** روی Neo4j برای استخراج روابط بین موجودیت‌ها
-- **گاردریل** برای رد سؤال‌های خارج از موضوع یا مربوط به اطلاعات شخصی/محرمانه
-- یک **ایجنت** LangChain که تنها یک ابزار (`search_knowledge_base`) دارد
+## 🇮🇷 معرفی فارسی
 
+این پروژه یک معماری پیشرفته و ماژولار RAG (بازیابی ارتقایافته با تولید) برای سازمان فرضی **Insurellm** است. هدف اصلی این سیستم، حذف توهم مدل‌های زبانی (Hallucination) و پاسخ‌دهی متکی به شواهد از طریق ترکیب بازیابی ساختاریافته و معنایی است.
+
+### ویژگی‌های اصلی:
+1. **بازیابی ترکیبی (Hybrid Search):** ترکیب جست‌وجوی معنایی/برداری (Chroma DB) و تطبیق کلمات کلیدی (BM25) به همراه فیوژن نتایج توسط الگوریتم **Reciprocal Rank Fusion (RRF)**.
+2. **گسترش پرامپت (Query Expansion):** تولید کوئری‌های جایگزین توسط LLM برای افزایش پوشش بازخوانی (Recall).
+3. **بازچینش (Cross-Encoder Reranking):** مرتب‌سازی مجدد دقیق‌ترین چانک‌ها به کمک مدل Cross-Encoder برای بهینه‌سازی دقیق کانتکست ارسالی.
+4. **گراف دانش (Knowledge Graph):** اتصال به Neo4j جهت استخراج و تزریق روابط موجودیتی صریح (Entities & Relationships).
+5. **گاردریل (Enterprise Guardrails):** فیلتر خودکار و مهار پرسش‌های خارج از دامنه‌، محرمانه یا نامرتبط پیش از مرحله بازیابی.
+6. **رصدپذیری کامل (End-to-End Observability):** پایش گام‌به‌گام و محاسبه تأخیر (Latency) هر مرحله با **LangSmith**.
+
+---
+
+## 🏛 Architecture & Retrieval Flow
+
+```text
+User Query
+    │
+    ▼
+[ Guardrail Policy Check ] ──(Violation)──► Return Safe Refusal
+    │ (Allowed)
+    ├─────────────────────────────────┐
+    ▼                                 ▼
+[ Knowledge Graph (Neo4j) ]   [ Query Expansion (LLM) ]
+(Extract entities & facts)            │
+    │                         ┌───────┴────────┐
+    │                         ▼                ▼
+    │                 [ Vector Store ]    [ BM25 Index ]
+    │                 (Dense Embeddings)  (Sparse Tokens)
+    │                         └───────┬────────┘
+    │                                 ▼
+    │                     [ Reciprocal Rank Fusion ]
+    │                                 ▼
+    │                     [ Cross-Encoder Reranker ]
+    │                                 ▼
+    └───────────────┬─────────────────┘
+                    ▼
+     [ Merged Structured Context ]
+                    │
+                    ▼
+          [ LangChain Agent ] ──► Final Verified Response
 ### پیش‌نیازها
 - Python نسخه 3.12 یا بالاتر
 - یک کلید API سازگار با OpenAI (در این پروژه از GapGPT استفاده شده)
@@ -160,7 +201,8 @@ pipeline = RagPipeline.build()          # enable_graph=False for text-only
 agent = build_agent(pipeline)
 print(ask(agent, "What are the features of Rellm?"))
 ```
-
+📊 Evaluation FrameworkThe pipeline supports both retrieval-focused and end-to-end generational metrics:Bashpython scripts/evaluate.py
+Retrieval Benchmarks: Evaluates ranking effectiveness using standard Information Retrieval (IR) metrics:Hit@k: Verification that ground-truth references exist within top-$k$ returned segments.MRR (Mean Reciprocal Rank): Evaluates how close the most relevant document is placed to the top position.Generational Integrity (Ragas): Supports evaluating Faithfulness (hallucination detection) and Answer Relevance using LLM-as-a-judge patterns.
 ### How it works
 1. **Guardrail** — `question_policy` refuses sensitive terms and off-topic queries up front.
 2. **Graph search** — entities are extracted from the query and matched against Neo4j to pull
@@ -172,8 +214,4 @@ print(ask(agent, "What are the features of Rellm?"))
 6. **Combine** — graph facts and reranked text chunks are merged into the context returned to
    the agent.
 
-### Notes
-- Comments are English-only; the original notebook's Persian comments were translated.
-- `print` calls became `logging`; run scripts at `INFO` (default) to see the retrieval trace.
-- Filesystem paths are resolved relative to the package, so scripts run from any directory.
-- The original notebook and the superseded `evaluate_retrieval.py` are preserved in `archive/`.
+
