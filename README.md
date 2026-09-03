@@ -1,4 +1,4 @@
-# Insurellm: Graph-Augmented Hybrid RAG & Multi-Agent Architecture
+# Insurellm: Advanced GraphRAG, Hybrid Search & Agentic Retrieval Flow
 
 [![Python 3.12+](https://img.shields.io/badge/Python-3.12%2B-blue.svg)](https://www.python.org/downloads/)
 [![LangChain](https://img.shields.io/badge/LangChain-Integration-orange)](https://github.com/langchain-ai/langchain)
