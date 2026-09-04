@@ -16,6 +16,7 @@ sentence-transformers>=5.6.1
 rank-bm25>=0.2.2
 python-dotenv>=1.2.2
 langsmith
+faiss-cpu>=1.8.0
 # Evaluation (scripts/evaluate.py). ragas provides the end-to-end LLM-as-judge
 # metrics; datasets is its input format. See rag/evaluation/_compat.py for the
 # langchain-community compatibility shim ragas 0.4.x needs.

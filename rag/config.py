@@ -78,6 +78,16 @@ ALLOWED_DOC_TYPES = ["company", "products", "contracts", "employees"]
 
 
 # ---------------------------------------------------------------------------
+# Semantic Cache Configuration
+# ---------------------------------------------------------------------------
+CACHE_DIR = BASE_DIR / "cache_store"
+CACHE_SIMILARITY_THRESHOLD = 0.90
+CACHE_EMBEDDING_DIM = 384  # بعد خروجی مدل all-MiniLM-L6-v2
+
+
+
+
+# ---------------------------------------------------------------------------
 # Guardrails
 # ---------------------------------------------------------------------------
 # Queries containing these terms are treated as requests for private data.
