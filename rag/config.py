@@ -15,36 +15,25 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-# Load variables from the nearest .env once, at import time. ``override=True``
-# mirrors the original notebook so a .env value wins over a stale shell export.
+
 load_dotenv(override=True)
 
 
-# ---------------------------------------------------------------------------
-# Filesystem paths
-# ---------------------------------------------------------------------------
-# BASE_DIR is the test_RAG project root (this file lives in test_RAG/rag/).
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 KNOWLEDGE_BASE_DIR = BASE_DIR / "knowledge-base"
 CHROMA_DIR = BASE_DIR / "ch_database"
 
 
-# ---------------------------------------------------------------------------
-# Models
-# ---------------------------------------------------------------------------
 EMBEDDING_MODEL = "all-MiniLM-L6-v2"
 CHAT_MODEL = "gpt-5-nano"
 RERANKER_MODEL = "BAAI/bge-reranker-base"
 
-# The model used as the Ragas judge during evaluation. Kept separate from
-# CHAT_MODEL so the evaluator can differ from the generator (avoiding
-# self-evaluation bias); override with the JUDGE_MODEL environment variable.
+
 JUDGE_MODEL = os.getenv("JUDGE_MODEL", CHAT_MODEL)
 
 
-# ---------------------------------------------------------------------------
-# Credentials / endpoints (read from the environment / .env)
-# ---------------------------------------------------------------------------
+
 GAPGPT_API_KEY = os.getenv("GAPGPT_API_KEY")
 GAPGPT_BASE_URL = os.getenv("GAPGPT_BASE_URL")
 
@@ -53,44 +42,30 @@ NEO4J_USERNAME = os.getenv("NEO4J_USERNAME")
 NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD")
 
 
-# ---------------------------------------------------------------------------
-# Chunking
-# ---------------------------------------------------------------------------
 CHUNK_SIZE = 1000
 CHUNK_OVERLAP = 200
 
 
-# ---------------------------------------------------------------------------
-# Retrieval tuning
-# ---------------------------------------------------------------------------
-VECTOR_TOP_K = 5          # candidates pulled from the Chroma vector store per query
-BM25_TOP_K = 5            # candidates pulled from the BM25 index per query
-RRF_K = 60                # Reciprocal Rank Fusion smoothing constant
-HYBRID_CANDIDATE_K = 10   # fused candidates handed to the reranker
-RERANK_TOP_K = 3          # documents kept after cross-encoder reranking
+VECTOR_TOP_K = 5          
+BM25_TOP_K = 5            
+RRF_K = 60                
+HYBRID_CANDIDATE_K = 10   
+RERANK_TOP_K = 3          
 
 
-# ---------------------------------------------------------------------------
-# Document access policy
-# ---------------------------------------------------------------------------
-# Document folders (doc_type) the assistant is allowed to retrieve from.
+
 ALLOWED_DOC_TYPES = ["company", "products", "contracts", "employees"]
 
 
-# ---------------------------------------------------------------------------
-# Semantic Cache Configuration
-# ---------------------------------------------------------------------------
+
 CACHE_DIR = BASE_DIR / "cache_store"
 CACHE_SIMILARITY_THRESHOLD = 0.90
-CACHE_EMBEDDING_DIM = 384  # بعد خروجی مدل all-MiniLM-L6-v2
+CACHE_EMBEDDING_DIM = 384  
 
 
 
 
-# ---------------------------------------------------------------------------
-# Guardrails
-# ---------------------------------------------------------------------------
-# Queries containing these terms are treated as requests for private data.
+
 SENSITIVE_QUERY_TERMS = {
     "salary",
     "compensation",
@@ -102,7 +77,6 @@ SENSITIVE_QUERY_TERMS = {
     "phone number",
 }
 
-# A query must mention at least one of these terms to be considered on-topic.
 INSURELLM_TERMS = {
     "insurellm",
     "carllm",
@@ -126,9 +100,7 @@ SENSITIVE_RESPONSE = (
 )
 
 
-# ---------------------------------------------------------------------------
-# Agent system prompt
-# ---------------------------------------------------------------------------
+
 AGENT_INSTRUCTIONS = """
 You are a specialized AI assistant strictly representing the company Insurellm.
 
