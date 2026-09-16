@@ -1,4 +1,4 @@
-# Insurellm: Advanced GraphRAG, Hybrid Search & Agentic Retrieval Flow
+# Advanced RAG, Hybrid Search & Knowledge Graph and Agentic Retrieval Flow
 
 [![Python 3.12+](https://img.shields.io/badge/Python-3.12%2B-blue.svg)](https://www.python.org/downloads/)
 [![LangChain](https://img.shields.io/badge/LangChain-Integration-orange)](https://github.com/langchain-ai/langchain)
@@ -6,7 +6,7 @@
 [![Chroma](https://img.shields.io/badge/Chroma-Vector%20Store-red)](https://www.trychroma.com/)
 [![LangSmith](https://img.shields.io/badge/Observability-LangSmith-1C3C3C)](https://smith.langchain.com/)
 
-A modular, production-grade Retrieval-Augmented Generation (RAG) pipeline designed for domain-specific question answering. It integrates **Dense (Vector) + Sparse (BM25)** retrieval with **Reciprocal Rank Fusion (RRF)**, **Cross-Encoder Reranking**, an explicit **Neo4j Knowledge Graph**, enterprise **Guardrails**, and end-to-end **LangSmith Observability**.
+A modular, production-grade Retrieval-Augmented Generation (RAG) pipeline designed for domain-specific question answering. It integrates **Dense (Vector) + Sparse (BM25)** retrieval with **Reciprocal Rank Fusion (RRF)**, **Cross-Encoder Reranking**, an explicit **Neo4j Knowledge Graph**, enterprise **Guardrails**, **Persistent Semantic Caching**, and end-to-end **LangSmith Observability**.
 
 ---
 
@@ -23,195 +23,196 @@ A modular, production-grade Retrieval-Augmented Generation (RAG) pipeline design
 
 ## 🇮🇷 معرفی فارسی
 
-این پروژه یک معماری پیشرفته و ماژولار RAG (بازیابی ارتقایافته با تولید) برای سازمان فرضی **Insurellm** است. هدف اصلی این سیستم، حذف توهم مدل‌های زبانی (Hallucination) و پاسخ‌دهی متکی به شواهد از طریق ترکیب بازیابی ساختاریافته و معنایی است.
+این پروژه یک معماری پیشرفته و ماژولار RAG (بازیابی ارتقایافته با تولید) برای سازمان فرضی **Insurellm** است. هدف اصلی این سیستم، حذف توهم مدل‌های زبانی (Hallucination) و پاسخ‌دهی متکی به شواهد از طریق ترکیب بازیابی ساختاریافته، معنایی و حافظه کش معنایی پایدار است.
 
-### ویژگی‌های اصلی:
-1. **بازیابی ترکیبی (Hybrid Search):** ترکیب جست‌وجوی معنایی/برداری (Chroma DB) و تطبیق کلمات کلیدی (BM25) به همراه فیوژن نتایج توسط الگوریتم **Reciprocal Rank Fusion (RRF)**.
-2. **گسترش پرامپت (Query Expansion):** تولید کوئری‌های جایگزین توسط LLM برای افزایش پوشش بازخوانی (Recall).
-3. **بازچینش (Cross-Encoder Reranking):** مرتب‌سازی مجدد دقیق‌ترین چانک‌ها به کمک مدل Cross-Encoder برای بهینه‌سازی دقیق کانتکست ارسالی.
-4. **گراف دانش (Knowledge Graph):** اتصال به Neo4j جهت استخراج و تزریق روابط موجودیتی صریح (Entities & Relationships).
-5. **گاردریل (Enterprise Guardrails):** فیلتر خودکار و مهار پرسش‌های خارج از دامنه‌، محرمانه یا نامرتبط پیش از مرحله بازیابی.
-6. **رصدپذیری کامل (End-to-End Observability):** پایش گام‌به‌گام و محاسبه تأخیر (Latency) هر مرحله با **LangSmith**.
+### ویژگی‌های کلیدی:
+1. **کش معنایی پایدار (Persistent Semantic Cache):** استفاده از FAISS و SQLite برای ذخیره و بازیابی پاسخ پرسش‌های مشابه با آستانه شباهت بالا، جهت کاهش چشمگیر تأخیر و هزینه‌های API.
+2. **بازیابی ترکیبی (Hybrid Search):** ترکیب جست‌وجوی معنایی/برداری (Chroma DB) و تطبیق کلمات کلیدی (BM25) به همراه فیوژن نتایج توسط الگوریتم **Reciprocal Rank Fusion (RRF)**.
+3. **گسترش پرامپت (Query Expansion):** تولید کوئری‌های جایگزین توسط LLM برای افزایش پوشش بازخوانی (Recall).
+4. **بازچینش (Cross-Encoder Reranking):** مرتب‌سازی مجدد دقیق‌ترین چانک‌ها به کمک مدل Cross-Encoder (`bge-reranker-base`) برای بهینه‌سازی دقیق کانتکست ارسالی.
+5. **گراف دانش (Knowledge Graph):** اتصال به Neo4j جهت استخراج و تزریق روابط موجودیتی صریح (Entities & Relationships).
+6. **گاردریل (Enterprise Guardrails):** فیلتر خودکار و مهار پرسش‌های خارج از دامنه‌، محرمانه یا نامرتبط پیش از مرحله بازیابی.
+7. **رصدپذیری کامل (End-to-End Observability):** پایش گام‌به‌گام و محاسبه تأخیر (Latency) هر مرحله با **LangSmith**.
 
 ---
 
 ## 🏛 Architecture & Retrieval Flow
 
-```text
-User Query
-    │
-    ▼
-[ Guardrail Policy Check ] ──(Violation)──► Return Safe Refusal
-    │ (Allowed)
-    ├─────────────────────────────────┐
-    ▼                                 ▼
-[ Knowledge Graph (Neo4j) ]   [ Query Expansion (LLM) ]
-(Extract entities & facts)            │
-    │                         ┌───────┴────────┐
-    │                         ▼                ▼
-    │                 [ Vector Store ]    [ BM25 Index ]
-    │                 (Dense Embeddings)  (Sparse Tokens)
-    │                         └───────┬────────┘
-    │                                 ▼
-    │                     [ Reciprocal Rank Fusion ]
-    │                                 ▼
-    │                     [ Cross-Encoder Reranker ]
-    │                                 ▼
-    └───────────────┬─────────────────┘
-                    ▼
-     [ Merged Structured Context ]
-                    │
-                    ▼
-          [ LangChain Agent ] ──► Final Verified Response
-### پیش‌نیازها
-- Python نسخه 3.12 یا بالاتر
-- یک کلید API سازگار با OpenAI (در این پروژه از GapGPT استفاده شده)
-- (اختیاری) Docker برای اجرای Neo4j — بخش گراف دانش بدون آن هم به‌صورت «فقط متنی» کار می‌کند
+```mermaid
+flowchart TB
+    subgraph CACHE["Semantic Cache Check"]
+        Q0["User Question"] --> CACHE_CHK{"FAISS Vector Match<br/>score >= 0.90"}
+        CACHE_CHK -->|Hit| CACHED_ANS["Cached Answer from SQLite"]
+        CACHE_CHK -->|Miss| G1
+    end
 
-### نصب
-اگر از محیط uv در پوشهٔ والد استفاده می‌کنید:
+    subgraph QUERY["Query-time Pipeline"]
+        direction TB
 
-```bash
-cd ..
-uv sync
+        G1{"① Guardrail<br/>question_policy"}
+
+        G1 -->|"Sensitive / Off-topic"| REFUSE["Refusal Response"]
+        G1 -->|"Pass"| AGENT["Agent<br/>create_agent<br/>gpt-5-nano"]
+
+        AGENT -->|"search_knowledge_base(query)"| G2["② Graph Search<br/>Neo4j"]
+
+        AGENT --> QE["③ Query Expansion<br/>LLM → 3 Alternative Queries"]
+
+        QE --> HS["④ Hybrid Search<br/>Vector + BM25"]
+
+        HS --> RRF["RRF Fusion"]
+
+        RRF --> RR["⑤ Cross-Encoder Reranking<br/>bge-reranker-base"]
+
+        RR --> TOP3["Top 3 Chunks"]
+
+        G2 --> MERGE["⑥ Merge Graph Facts<br/>+ Text Context"]
+        TOP3 --> MERGE
+
+        MERGE --> ANS["Final Answer<br/>+ Store in Semantic Cache"]
+    end
 ```
 
-یا نصب مستقل همین زیرپروژه:
+### Retrieval Flow
+
+1. **Semantic Cache Check**
+   ابتدا سؤال کاربر با cache معنایی مقایسه می‌شود. اگر similarity score از `0.90` بیشتر باشد، پاسخ ذخیره‌شده از SQLite برگردانده می‌شود و pipeline اصلی اجرا نمی‌شود.
+
+2. **Guardrail**
+   در صورت عدم وجود cache hit، سؤال ابتدا توسط `question_policy` بررسی می‌شود تا پرسش‌های خارج از حوزه یا حساس قبل از retrieval کنترل شوند.
+
+3. **Agentic Retrieval**
+   در صورت عبور از guardrail، Agent با استفاده از ابزار `search_knowledge_base` فرآیند بازیابی را مدیریت می‌کند.
+
+4. **Knowledge Graph Search**
+   در مسیر Graph، موجودیت‌های موردنیاز از سؤال استخراج شده و برای جست‌وجوی روابط مرتبط در **Neo4j** استفاده می‌شوند.
+
+5. **Query Expansion**
+   هم‌زمان، LLM چند query جایگزین تولید می‌کند تا احتمال پیدا کردن اطلاعات مرتبط افزایش پیدا کند.
+
+6. **Hybrid Search**
+   queryهای تولیدشده وارد سیستم Hybrid Retrieval می‌شوند و نتایج **Dense Vector Search** از Chroma با نتایج **Sparse Retrieval** مبتنی بر BM25 ترکیب می‌شوند.
+
+7. **RRF Fusion**
+   نتایج دو روش retrieval با استفاده از **Reciprocal Rank Fusion (RRF)** ادغام و یک لیست واحد از candidateها ایجاد می‌شود.
+
+8. **Cross-Encoder Reranking**
+   candidateهای بازیابی‌شده با `bge-reranker-base` مجدداً رتبه‌بندی می‌شوند تا مرتبط‌ترین chunkها برای مرحله generation انتخاب شوند.
+
+9. **Context Assembly**
+   در نهایت، facts استخراج‌شده از Knowledge Graph با context متنی حاصل از retrieval ترکیب می‌شوند.
+
+10. **Generation & Caching**
+    مدل بر اساس context نهایی پاسخ را تولید می‌کند و نتیجه برای استفاده در درخواست‌های مشابه در semantic cache ذخیره می‌شود.
+
+
+
+
+## 📂 Project Layout
+
+```text
+test_RAG/
+│
+├── rag/                              # Core RAG package
+│   ├── config.py                     # Configuration & constants
+│   ├── llm.py                        # Chat & embedding model factories
+│   ├── cache.py                      # Persistent semantic cache
+│   ├── ingestion.py                  # Document loading & chunking
+│   ├── vector_store.py               # Chroma vector store & retriever
+│   ├── guardrails.py                 # Input policies & guardrails
+│   │
+│   ├── retrieval/                    # Retrieval components
+│   │   ├── bm25.py                   # Sparse retrieval
+│   │   ├── fusion.py                 # RRF fusion
+│   │   ├── query_expansion.py        # Query expansion
+│   │   └── hybrid.py                 # Hybrid retrieval
+│   │
+│   ├── graph/                        # Knowledge Graph components
+│   │   ├── schema.py                 # Graph schema
+│   │   ├── extraction.py             # Entity & relationship extraction
+│   │   └── search.py                 # Neo4j graph search
+│   │
+│   ├── pipeline.py                   # End-to-end RAG pipeline
+│   └── agent.py                      # LangChain agent & tools
+│
+├── scripts/                          # CLI & evaluation scripts
+│   ├── build_vector_store.py         # Build Chroma index
+│   ├── build_graph.py                # Build Neo4j graph
+│   ├── ask.py                        # Query the agent
+│   └── evaluate.py                   # Run evaluation
+│
+├── knowledge-base/                   # Insurellm knowledge base
+│   ├── projects/
+│   ├── contracts/
+│   ├── company/
+│   └── employees/
+│
+├── cache_store/                      # Persistent cache storage
+├── ch_database/                      # Chroma vector database
+├── docker-compose.yml                # Neo4j configuration
+└── requirements.txt                  # Python dependencies
+```
+
+## 🚀 Quickstart & Usage
+
+## 🚀 Quickstart & Usage
+
+### پیش‌نیازها
+
+* Python نسخه `3.12+`
+* یک API Key سازگار با OpenAI؛ در این پروژه از GapGPT استفاده شده است.
+* Docker برای اجرای Neo4j — اختیاری
+
+### نصب و راه‌اندازی
+
+کلون کردن repository و نصب وابستگی‌ها:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### تنظیم متغیرهای محیطی
-یک فایل `.env` (در ریشهٔ workspace، یعنی پوشهٔ والدِ `test_RAG`) با این کلیدها بسازید:
+متغیرهای محیطی را در فایل `.env` تنظیم کنید:
 
 ```env
 GAPGPT_API_KEY=your_api_key
 GAPGPT_BASE_URL=https://api.gapgpt.app/v1
+
 NEO4J_USERNAME=neo4j
 NEO4J_PASSWORD=password1234
 ```
 
-### راه‌اندازی Neo4j (اختیاری)
+### راه‌اندازی Neo4j
+
+در صورت استفاده از Knowledge Graph:
+
 ```bash
 docker compose up -d
 ```
-پس از بالا آمدن، محیط Neo4j Browser روی `http://localhost:8474` و آدرس bolt روی
-`bolt://localhost:8687` در دسترس است.
 
-### گام‌های اجرا
+### اجرای Pipeline
+
+ساخت Vector Store:
+
 ```bash
-# ۱) ساخت یا بارگذاری ایندکس برداری (Chroma)
 python scripts/build_vector_store.py
+```
 
-# ۲) ساخت گراف دانش در Neo4j (اختیاری، نیازمند Docker)
+ساخت Knowledge Graph:
+
+```bash
 python scripts/build_graph.py
+```
 
-# ۳) پرسش از ایجنت
+پرسش از Agent:
+
+```bash
 python scripts/ask.py "What products does Insurellm offer?"
+```
 
-# ۴) ارزیابی کیفیت بازیابی (Hit@k و MRR)
+اجرای Evaluation:
+
+```bash
 python scripts/evaluate.py
 ```
 
-> نکته: مسیرها نسبت به خودِ پکیج محاسبه می‌شوند، پس اسکریپت‌ها را از هر جایی می‌توانید اجرا کنید.
-> کامنت‌های داخل کد همگی انگلیسی هستند.
-
----
-
-## English
-
-### Overview
-The assistant answers questions about Insurellm by fusing several retrieval strategies and
-grounding the LLM's answer in the retrieved context. It refuses off-topic questions and
-personal/sensitive employee information.
-
-### Architecture
-
-```mermaid
-flowchart TD
-    Q[User question] --> A[LangChain agent]
-    A -->|search_knowledge_base tool| G{Guardrail}
-    G -->|blocked| R[Canned refusal]
-    G -->|allowed| GR[Graph search - Neo4j]
-    G -->|allowed| QE[Query expansion - LLM]
-    QE --> HS[Hybrid search: Vector + BM25]
-    HS --> RRF[Reciprocal Rank Fusion]
-    RRF --> RK[Cross-encoder rerank]
-    GR --> CTX[Combine graph + text context]
-    RK --> CTX
-    CTX --> A
-    A --> ANS[Grounded answer]
-```
-
-### Project layout
-```
-test_RAG/
-├── rag/                       # the package
-│   ├── config.py              # paths, model names, tuning, guardrail terms, prompt
-│   ├── llm.py                 # chat model + embeddings factories
-│   ├── ingestion.py           # load / split / filter markdown documents
-│   ├── vector_store.py        # Chroma build/load + policy-filtered retriever
-│   ├── guardrails.py          # question_policy()
-│   ├── retrieval/             # bm25, fusion, query_expansion, reranker, hybrid
-│   ├── graph/                 # schema, extraction, store (Neo4j), search
-│   ├── pipeline.py            # RagPipeline: wires it all + search_knowledge_base()
-│   ├── agent.py               # build_agent() + ask()
-│   └── evaluation.py          # Hit@k / MRR
-├── scripts/                   # build_vector_store, build_graph, ask, evaluate
-├── knowledge-base/            # source markdown (company, products, contracts, employees)
-├── ch_database/               # persisted Chroma store
-├── docker-compose.yml         # Neo4j
-├── requirements.txt
-└── archive/                   # original notebook + old evaluation script
-```
-
-### Requirements
-- Python ≥ 3.12
-- An OpenAI-compatible chat endpoint (GapGPT here)
-- Optional: Docker for Neo4j (the graph degrades gracefully to text-only if unavailable)
-
-Dependencies live in the parent workspace's `../pyproject.toml` (managed with `uv`); a
-`requirements.txt` subset is included for standalone installs.
-
-### Environment variables
-| Variable | Purpose |
-| --- | --- |
-| `GAPGPT_API_KEY` | API key for the chat model |
-| `GAPGPT_BASE_URL` | Base URL of the OpenAI-compatible endpoint |
-| `NEO4J_USERNAME` | Neo4j user (default `neo4j`) — only for the graph |
-| `NEO4J_PASSWORD` | Neo4j password (`password1234` in `docker-compose.yml`) |
-
-`.env` is read from the workspace root. The Neo4j bolt URI (`bolt://localhost:8687`) is set in
-[`rag/config.py`](rag/config.py).
-
-### Usage
-```bash
-python scripts/build_vector_store.py        # 1. build/load Chroma (logs chunk counts)
-docker compose up -d && python scripts/build_graph.py   # 2. optional: populate Neo4j
-python scripts/ask.py "..."                 # 3. ask the agent (add --quiet to hide the trace)
-python scripts/evaluate.py                   # 4. retrieval metrics (Hit@k / MRR)
-```
-
-Or from Python:
-```python
-from rag import RagPipeline, build_agent, ask
-
-pipeline = RagPipeline.build()          # enable_graph=False for text-only
-agent = build_agent(pipeline)
-print(ask(agent, "What are the features of Rellm?"))
-```
-📊 Evaluation FrameworkThe pipeline supports both retrieval-focused and end-to-end generational metrics:Bashpython scripts/evaluate.py
-Retrieval Benchmarks: Evaluates ranking effectiveness using standard Information Retrieval (IR) metrics:Hit@k: Verification that ground-truth references exist within top-$k$ returned segments.MRR (Mean Reciprocal Rank): Evaluates how close the most relevant document is placed to the top position.Generational Integrity (Ragas): Supports evaluating Faithfulness (hallucination detection) and Answer Relevance using LLM-as-a-judge patterns.
-### How it works
-1. **Guardrail** — `question_policy` refuses sensitive terms and off-topic queries up front.
-2. **Graph search** — entities are extracted from the query and matched against Neo4j to pull
-   related `Source [RELATION] Target` facts (skipped if the graph is disabled/unreachable).
-3. **Query expansion** — the LLM generates alternative phrasings to widen recall.
-4. **Hybrid search** — each query variant hits both the vector retriever and BM25; the ranked
-   lists are fused with RRF.
-5. **Reranking** — a cross-encoder rescores the fused candidates and keeps the top few.
-6. **Combine** — graph facts and reranked text chunks are merged into the context returned to
-   the agent.
-
-
+گاردریل (Guardrails): تست‌های رگرسیون deterministic برای بررسی عملکرد صحیح در رد پرسش‌هامرتبط یا محرمانه.
